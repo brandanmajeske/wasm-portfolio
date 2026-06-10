@@ -10,7 +10,8 @@
 | Origin Access Control | `E2948NBW4SEPMX` |
 | ACM certificate | `arn:aws:acm:us-east-1:904233124492:certificate/af5ea92a-c54d-437e-9972-b111925bf351` |
 | Route 53 zone | `Z08739182SHS66F7XKAOW` (brandanmajeske.com) — A/AAAA alias for `labs` |
-| GitHub OIDC deploy role | **TODO** — needs the GitHub repo to exist (step 4 below) |
+| GitHub OIDC deploy role | `labs-wasm-portfolio-deploy` — trusts `repo:brandanmajeske/wasm-portfolio:ref:refs/heads/main` |
+| GitHub repo | https://github.com/brandanmajeske/wasm-portfolio (Actions variables set) |
 
 Manual deploy (until CI is wired up):
 
