@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brandan — Developer Portfolio</title>
+  <meta name="description" content="Developer portfolio powered by WebAssembly demos.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Brandan</h1>
+    <p class="tagline">Software developer &mdash; this site runs WebAssembly.</p>
+  </header>
+
+  <main>
+    <section id="demos">
+      <h2>Demos</h2>
+      <ul>
+        <li>
+          <a href="sand.html">Falling sand</a> &mdash; interactive particle
+          simulation (sand, water, stone) running as a Rust cellular automaton.
+        </li>
+        <li>
+          <a href="raytracer.html">Path tracer</a> &mdash; progressive
+          Monte-Carlo rendering with diffuse, metal, and glass materials,
+          refining live at one sample per pixel per frame.
+        </li>
+        <li>
+          <a href="bench.html">JS vs WASM benchmark</a> &mdash; the same path
+          tracer in JavaScript and Rust&rarr;WASM, racing side by side.
+        </li>
+      </ul>
+    </section>
+
+    <section id="hello-demo">
+      <h2>Walking skeleton: hello from Rust</h2>
+      <p>
+        The canvas below is rendered by a Rust module compiled to WebAssembly
+        and loaded with <code>instantiateStreaming</code>.
+      </p>
+      <canvas id="hello-canvas" width="640" height="240"
+              role="img" aria-label="Canvas rendered by a Rust WebAssembly module"></canvas>
+      <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built with Rust + wasm-bindgen, served from S3 + CloudFront.</p>
+  </footer>
+
+  <script type="module">
+    const status = document.getElementById('wasm-status');
+    try {
+      const init = (await import('./demos/hello/hello.js')).default;
+      await init();
+      status.textContent = 'WASM module loaded ✔';
+    } catch (e) {
+      status.textContent = 'WASM failed to load: ' + e;
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

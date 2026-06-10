@@ -1,0 +1,74 @@
+# Deploys dist/ to S3 + CloudFront on push to main.
+#
+# One-time setup (see infra/README.md):
+#   1. Create the S3 bucket, CloudFront distribution, and an IAM role with
+#      OIDC trust for this repository.
+#   2. Set repository variables (Settings → Secrets and variables → Actions):
+#        AWS_ROLE_ARN        arn:aws:iam::<account>:role/<deploy-role>
+#        AWS_REGION          e.g. us-east-1
+#        S3_BUCKET           bucket name
+#        CLOUDFRONT_DIST_ID  distribution id
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # OIDC federation — no long-lived AWS keys
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            demos/hello
+            demos/sand
+            demos/raytracer
+
+      - name: Install wasm-pack and wasm-opt
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          sudo apt-get update && sudo apt-get install -y binaryen
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync to S3
+        run: |
+          # Hashed-ish assets: long cache. WASM gets an explicit MIME type —
+          # wrong Content-Type breaks WebAssembly.instantiateStreaming().
+          aws s3 sync dist/ "s3://${{ vars.S3_BUCKET }}/" \
+            --delete \
+            --exclude "*.html" \
+            --cache-control "public,max-age=86400"
+          aws s3 cp dist/ "s3://${{ vars.S3_BUCKET }}/" \
+            --recursive --exclude "*" --include "*.wasm" \
+            --content-type application/wasm \
+            --cache-control "public,max-age=86400" \
+            --metadata-directive REPLACE
+          aws s3 sync dist/ "s3://${{ vars.S3_BUCKET }}/" \
+            --exclude "*" --include "*.html" \
+            --cache-control "public,max-age=60,must-revalidate"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DIST_ID }}" \
+            --paths "/*"

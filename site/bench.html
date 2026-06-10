@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JS vs WASM Benchmark — Brandan</title>
+  <meta name="description" content="The same path tracer in JavaScript and Rust→WebAssembly, racing side by side.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html">Brandan</a></h1>
+    <p class="tagline">The same path tracer, twice &mdash; JavaScript vs Rust &rarr; WASM.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>JS vs WASM</h2>
+      <p>
+        Both panels run the <em>same</em> Monte-Carlo path tracer on identical
+        320&times;240 canvases: the left is Rust compiled to WebAssembly, the
+        right a line-for-line JavaScript port. Each animation frame, every
+        engine that hasn't finished traces one full sample per pixel. Watch
+        which image converges first.
+      </p>
+
+      <div class="toolbar" role="toolbar" aria-label="Benchmark controls">
+        <label for="target-select">Samples:</label>
+        <select id="target-select">
+          <option value="20">20</option>
+          <option value="50" selected>50</option>
+          <option value="200">200</option>
+        </select>
+        <button id="restart-btn">Restart</button>
+      </div>
+
+      <div class="bench-grid">
+        <div>
+          <h3>Rust &rarr; WASM</h3>
+          <canvas id="wasm-canvas" width="320" height="240"
+                  role="img" aria-label="Scene rendered by the WebAssembly tracer"></canvas>
+          <p id="wasm-stats" class="status">&nbsp;</p>
+        </div>
+        <div>
+          <h3>JavaScript</h3>
+          <canvas id="js-canvas" width="320" height="240"
+                  role="img" aria-label="Scene rendered by the JavaScript tracer"></canvas>
+          <p id="js-stats" class="status">&nbsp;</p>
+        </div>
+      </div>
+
+      <p id="verdict" class="verdict">&nbsp;</p>
+      <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+      <p class="status">
+        Caveat for fairness: the JS port is idiomatic but unoptimized — it
+        allocates a short-lived object per vector operation, which is exactly
+        the overhead Rust's stack-allocated value types avoid. That difference
+        is part of the point.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="index.html">&larr; back</a> &middot; Built with Rust + wasm-bindgen.</p>
+  </footer>
+
+  <script type="module">
+    const status = document.getElementById('wasm-status');
+    try {
+      const { default: init, Raytracer } = await import('./demos/raytracer/raytracer.js');
+      const { JsTracer } = await import('./bench-tracer.js');
+      await init();
+
+      const wasmRt = new Raytracer('wasm-canvas');
+      const jsRt = new JsTracer(document.getElementById('js-canvas'));
+      const pixels = 320 * 240;
+
+      const engines = [
+        { name: 'wasm', rt: wasmRt, ms: 0, statsEl: document.getElementById('wasm-stats') },
+        { name: 'js', rt: jsRt, ms: 0, statsEl: document.getElementById('js-stats') },
+      ];
+      const verdictEl = document.getElementById('verdict');
+      let target = 50;
+
+      const stats = (e) => {
+        const n = e.rt.passes();
+        if (n === 0) return;
+        const avg = e.ms / n;
+        const msps = (pixels / (avg / 1000)) / 1e6;
+        e.statsEl.textContent =
+          `${n}/${target} passes · ${avg.toFixed(1)} ms/pass · ${msps.toFixed(1)} Msamples/s`;
+      };
+
+      const verdict = () => {
+        const [w, j] = engines;
+        if (w.rt.passes() === 0 || j.rt.passes() === 0) return;
+        const speedup = (j.ms / j.rt.passes()) / (w.ms / w.rt.passes());
+        verdictEl.textContent = `WASM is ${speedup.toFixed(1)}× faster on this machine.`;
+      };
+
+      const step = (e) => {
+        const t0 = performance.now();
+        e.rt.pass();
+        e.ms += performance.now() - t0;
+        e.rt.present();
+        stats(e);
+      };
+
+      // Test hook: ?passes=N runs both engines synchronously — used for
+      // headless verification. One clock read per engine, presentation
+      // excluded: we time tracing, not canvas blits.
+      const fastPasses = Number(new URLSearchParams(location.search).get('passes') || 0);
+      if (fastPasses > 0) {
+        target = fastPasses;
+        for (const e of engines) {
+          const t0 = performance.now();
+          for (let i = 0; i < fastPasses; i++) e.rt.pass();
+          e.ms = performance.now() - t0;
+          e.rt.present();
+          stats(e);
+        }
+        verdict();
+        status.textContent = `WASM module loaded ✔ — ran ${fastPasses} synchronous passes each`;
+      } else {
+        let running = true;
+        const frame = () => {
+          let work = false;
+          for (const e of engines) {
+            if (e.rt.passes() < target) {
+              step(e);
+              work = true;
+            }
+          }
+          verdict();
+          if (work) requestAnimationFrame(frame);
+          else running = false;
+        };
+        const restart = () => {
+          target = Number(document.getElementById('target-select').value);
+          for (const e of engines) {
+            e.rt.reset?.();
+            e.ms = 0;
+          }
+          // JsTracer has no reset; recreate it instead.
+          engines[1].rt = new JsTracer(document.getElementById('js-canvas'));
+          verdictEl.textContent = ' ';
+          if (!running) { running = true; requestAnimationFrame(frame); }
+        };
+        document.getElementById('restart-btn').addEventListener('click', restart);
+        document.getElementById('target-select').addEventListener('change', restart);
+        requestAnimationFrame(frame);
+        status.textContent = 'WASM module loaded ✔ — racing';
+      }
+    } catch (e) {
+      status.textContent = 'WASM failed to load: ' + e;
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

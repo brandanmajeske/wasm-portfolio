@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Path Tracer — Brandan</title>
+  <meta name="description" content="Progressive path tracer written in Rust, compiled to WebAssembly, rendering in your browser.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html">Brandan</a></h1>
+    <p class="tagline">Path tracer &mdash; physically-based rendering in Rust &rarr; WASM.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Progressive path tracer</h2>
+      <p>
+        A Monte-Carlo path tracer (diffuse, metal, and glass materials, up to
+        8 bounces) running entirely in your browser. Each frame adds one
+        sample per pixel and the image refines live &mdash; watch the noise
+        melt away. All math is Rust compiled to WebAssembly; JavaScript only
+        schedules frames and reads the clock.
+      </p>
+
+      <div class="toolbar" role="toolbar" aria-label="Render controls">
+        <label for="target-select">Samples:</label>
+        <select id="target-select">
+          <option value="50">50</option>
+          <option value="200" selected>200</option>
+          <option value="1000">1000</option>
+        </select>
+        <button id="restart-btn">Restart</button>
+      </div>
+
+      <canvas id="rt-canvas" width="320" height="240"
+              role="img" aria-label="Path-traced scene of spheres on a checkered floor"></canvas>
+      <p id="rt-stats" class="status">&nbsp;</p>
+      <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="index.html">&larr; back</a> &middot; Built with Rust + wasm-bindgen.</p>
+  </footer>
+
+  <script type="module">
+    const status = document.getElementById('wasm-status');
+    const statsEl = document.getElementById('rt-stats');
+    try {
+      const { default: init, Raytracer } = await import('./demos/raytracer/raytracer.js');
+      await init();
+      const rt = new Raytracer('rt-canvas');
+      const canvas = document.getElementById('rt-canvas');
+      const pixelsPerPass = canvas.width * canvas.height;
+
+      let target = 200;
+      let totalMs = 0;
+
+      const stats = (lastMs) => {
+        const msps = (pixelsPerPass / (lastMs / 1000)) / 1e6;
+        statsEl.textContent =
+          `pass ${rt.passes()}/${target} · ${lastMs.toFixed(1)} ms/pass · ` +
+          `${msps.toFixed(1)} Msamples/s · ${(totalMs / 1000).toFixed(1)} s total`;
+      };
+
+      // Test hook: ?passes=N renders synchronously then stops — used for
+      // headless verification.
+      const fastPasses = Number(new URLSearchParams(location.search).get('passes') || 0);
+      if (fastPasses > 0) {
+        const t0 = performance.now();
+        for (let i = 0; i < fastPasses; i++) rt.pass();
+        totalMs = performance.now() - t0;
+        rt.present();
+        target = fastPasses;
+        stats(totalMs / fastPasses);
+        status.textContent = `WASM module loaded ✔ — ran ${fastPasses} synchronous passes`;
+      } else {
+        let running = true;
+        const frame = () => {
+          if (rt.passes() >= target) { running = false; return; }
+          const t0 = performance.now();
+          rt.pass();
+          const dt = performance.now() - t0;
+          totalMs += dt;
+          rt.present();
+          stats(dt);
+          requestAnimationFrame(frame);
+        };
+        const restart = () => {
+          target = Number(document.getElementById('target-select').value);
+          rt.reset();
+          totalMs = 0;
+          if (!running) { running = true; requestAnimationFrame(frame); }
+        };
+        document.getElementById('restart-btn').addEventListener('click', restart);
+        document.getElementById('target-select').addEventListener('change', restart);
+        requestAnimationFrame(frame);
+        status.textContent = 'WASM module loaded ✔ — rendering';
+      }
+    } catch (e) {
+      status.textContent = 'WASM failed to load: ' + e;
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

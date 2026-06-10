@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Falling Sand — Brandan</title>
+  <meta name="description" content="Interactive falling-sand particle simulation written in Rust, compiled to WebAssembly.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html">Brandan</a></h1>
+    <p class="tagline">Falling sand &mdash; a particle simulation in Rust &rarr; WASM.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Falling sand</h2>
+      <p>
+        A classic cellular-automaton sandbox. Every frame, Rust updates a
+        320&times;200 grid (sand falls and piles, water flows, sand sinks
+        through water) and blits the pixels to the canvas as one
+        <code>ImageData</code>. Draw with your mouse or finger.
+      </p>
+
+      <div class="toolbar" role="toolbar" aria-label="Material picker">
+        <button data-material="1" class="active">Sand</button>
+        <button data-material="2">Water</button>
+        <button data-material="3">Stone</button>
+        <button data-material="0">Erase</button>
+        <button id="clear-btn" class="danger">Clear</button>
+      </div>
+
+      <canvas id="sand-canvas" class="pixel" width="320" height="200"
+              role="img" aria-label="Falling-sand simulation canvas"></canvas>
+      <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="index.html">&larr; back</a> &middot; Built with Rust + wasm-bindgen.</p>
+  </footer>
+
+  <script type="module">
+    const status = document.getElementById('wasm-status');
+    try {
+      const { default: init, Sand } = await import('./demos/sand/sand.js');
+      await init();
+      const canvas = document.getElementById('sand-canvas');
+      const sim = new Sand('sand-canvas');
+
+      // Seed a stone basin so the first poured sand has somewhere to pile.
+      for (let x = 70; x <= 250; x += 2) sim.paint(x, 185, 3, 3);
+      for (let y = 145; y <= 185; y += 2) {
+        sim.paint(70, y, 3, 3);
+        sim.paint(250, y, 3, 3);
+      }
+
+      // Test hook: ?ticks=N pours and steps the sim synchronously, renders
+      // once, and skips the animation loop — used for headless verification.
+      const fastTicks = Number(new URLSearchParams(location.search).get('ticks') || 0);
+      if (fastTicks > 0) {
+        for (let i = 0; i < 150; i++) {
+          sim.paint(120 + ((i * 7) % 11), 8, 1, 5);
+          sim.paint(205 + ((i * 5) % 7), 8, 2, 5);
+          sim.tick();
+          sim.tick();
+        }
+        for (let i = 0; i < fastTicks; i++) sim.tick();
+        sim.render();
+        status.textContent = `WASM module loaded ✔ — ran ${fastTicks} synchronous ticks`;
+      } else {
+        // Pour a little sand and water on load so the canvas is never blank.
+        let pour = 150;
+        const pourTimer = setInterval(() => {
+          sim.paint(120 + ((pour * 7) % 11), 8, 1, 5);
+          sim.paint(205 + ((pour * 5) % 7), 8, 2, 5);
+          if (--pour <= 0) clearInterval(pourTimer);
+        }, 16);
+      }
+
+      let material = 1;
+      const toolbar = document.querySelector('.toolbar');
+      toolbar.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.id === 'clear-btn') { sim.clear(); return; }
+        material = Number(btn.dataset.material);
+        toolbar.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+      });
+
+      let drawing = false;
+      const draw = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const x = Math.floor((e.clientX - r.left) * canvas.width / r.width);
+        const y = Math.floor((e.clientY - r.top) * canvas.height / r.height);
+        sim.paint(x, y, material, material === 1 || material === 2 ? 6 : 4);
+      };
+      canvas.addEventListener('pointerdown', (e) => {
+        drawing = true;
+        canvas.setPointerCapture(e.pointerId);
+        draw(e);
+        e.preventDefault();
+      });
+      canvas.addEventListener('pointermove', (e) => { if (drawing) draw(e); });
+      addEventListener('pointerup', () => { drawing = false; });
+
+      if (fastTicks <= 0) {
+        const frame = () => {
+          sim.tick();
+          sim.tick();
+          sim.render();
+          requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+        status.textContent = 'WASM module loaded ✔ — draw on the canvas';
+      }
+    } catch (e) {
+      status.textContent = 'WASM failed to load: ' + e;
+      console.error(e);
+    }
+  </script>
+</body>
+</html>
