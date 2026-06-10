@@ -19,7 +19,7 @@ for demo in demos/*/; do
   cp "$demo/pkg/${name}.js" "$demo/pkg/${name}_bg.wasm" "$out/"
 
   if command -v wasm-opt >/dev/null; then
-    wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int \
+    wasm-opt -Oz --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int \
       "$out/${name}_bg.wasm" -o "$out/${name}_bg.wasm"
   fi
 
