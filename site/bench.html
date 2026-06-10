@@ -3,81 +3,165 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JS vs WASM Benchmark — Brandan</title>
+  <title>JS vs WASM Benchmark — Brandan Labs</title>
   <meta name="description" content="The same path tracer in JavaScript and Rust→WebAssembly, racing side by side.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Bench-specific badge colors */
+    .badge-wasm { color: var(--color-primary); }
+    .badge-js   { color: var(--color-secondary); }
+    .bench-grid h3 { color: var(--text-secondary); }
+    .bench-caveat {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1.25rem;
+      max-width: 44rem;
+      line-height: 1.65;
+      font-style: italic;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1><a href="index.html">Brandan</a></h1>
-    <p class="tagline">The same path tracer, twice &mdash; JavaScript vs Rust &rarr; WASM.</p>
-  </header>
+
+  <!-- ── Nav ──────────────────────────────────────────────────── -->
+  <nav class="site-nav" id="site-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <span class="accent">BM</span><span class="sep">/</span>Labs
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html#demos">Demos</a></li>
+        <li><a href="sand.html">Sand</a></li>
+        <li><a href="raytracer.html">Tracer</a></li>
+        <li><a href="bench.html" style="color:var(--color-primary)">Benchmark</a></li>
+        <li><a href="https://brandanmajeske.com" class="nav-ext">Portfolio ↗</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Demo header ───────────────────────────────────────────── -->
+  <div class="demo-header">
+    <a href="index.html" class="back-link">&#8592; All demos</a>
+    <p class="section-label">Speed race · Rust vs JavaScript</p>
+    <h1 class="section-title" style="font-size:clamp(2rem,6vw,3.5rem);font-weight:800;letter-spacing:-0.03em;margin-bottom:.5rem">
+      <span class="gradient-text">JS</span> vs <span class="gradient-text">WASM</span>
+    </h1>
+    <p class="section-desc" style="margin-bottom:0">
+      The same Monte-Carlo path tracer implemented twice — once in Rust compiled to WASM,
+      once as an idiomatic JavaScript port — racing on identical 320&times;240 canvases.
+      Watch which image converges first.
+    </p>
+  </div>
 
   <main>
-    <section>
-      <h2>JS vs WASM</h2>
-      <p>
-        Both panels run the <em>same</em> Monte-Carlo path tracer on identical
-        320&times;240 canvases: the left is Rust compiled to WebAssembly, the
-        right a line-for-line JavaScript port. Each animation frame, every
-        engine that hasn't finished traces one full sample per pixel. Watch
-        which image converges first.
-      </p>
+    <section style="padding-top:0;border-top:none">
+      <div class="container">
 
-      <div class="toolbar" role="toolbar" aria-label="Benchmark controls">
-        <label for="target-select">Samples:</label>
-        <select id="target-select">
-          <option value="20">20</option>
-          <option value="50" selected>50</option>
-          <option value="200">200</option>
-        </select>
-        <button id="restart-btn">Restart</button>
-      </div>
-
-      <div class="bench-grid">
-        <div>
-          <h3>Rust &rarr; WASM</h3>
-          <canvas id="wasm-canvas" width="320" height="240"
-                  role="img" aria-label="Scene rendered by the WebAssembly tracer"></canvas>
-          <p id="wasm-stats" class="status">&nbsp;</p>
+        <div class="toolbar" role="toolbar" aria-label="Benchmark controls">
+          <label for="target-select">Samples:</label>
+          <select id="target-select">
+            <option value="20">20</option>
+            <option value="50" selected>50</option>
+            <option value="200">200</option>
+          </select>
+          <button id="restart-btn">Restart</button>
         </div>
-        <div>
-          <h3>JavaScript</h3>
-          <canvas id="js-canvas" width="320" height="240"
-                  role="img" aria-label="Scene rendered by the JavaScript tracer"></canvas>
-          <p id="js-stats" class="status">&nbsp;</p>
-        </div>
-      </div>
 
-      <p id="verdict" class="verdict">&nbsp;</p>
-      <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
-      <p class="status">
-        Caveat for fairness: the JS port is idiomatic but unoptimized — it
-        allocates a short-lived object per vector operation, which is exactly
-        the overhead Rust's stack-allocated value types avoid. That difference
-        is part of the point.
-      </p>
+        <div class="bench-grid">
+          <div>
+            <h3><span class="badge-wasm">●</span> Rust → WASM</h3>
+            <div class="canvas-wrap" id="wasm-wrap">
+              <canvas id="wasm-canvas" width="320" height="240"
+                      role="img" aria-label="Scene rendered by the WebAssembly tracer"></canvas>
+            </div>
+            <p id="wasm-stats" class="status">&nbsp;</p>
+          </div>
+          <div>
+            <h3><span class="badge-js">●</span> JavaScript</h3>
+            <div class="canvas-wrap" id="js-wrap">
+              <canvas id="js-canvas" width="320" height="240"
+                      role="img" aria-label="Scene rendered by the JavaScript tracer"></canvas>
+            </div>
+            <p id="js-stats" class="status">&nbsp;</p>
+          </div>
+        </div>
+
+        <p id="verdict" class="verdict">&nbsp;</p>
+        <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+        <p class="bench-caveat">
+          Caveat: the JS port is idiomatic but unoptimized — it allocates a new object per
+          vector operation, which is exactly the overhead Rust's stack-allocated value types
+          avoid. That difference is part of the point.
+        </p>
+
+      </div>
     </section>
   </main>
 
-  <footer>
-    <p><a href="index.html">&larr; back</a> &middot; Built with Rust + wasm-bindgen.</p>
+  <footer class="site-footer">
+    <span>Built with Rust + wasm-bindgen &middot; wasm-opt -O3</span>
+    <span>
+      <a href="index.html">← All demos</a>
+      <span class="footer-dot">&middot;</span>
+      <a href="https://brandanmajeske.com">brandanmajeske.com</a>
+    </span>
   </footer>
 
+  <!-- ── GSAP ─────────────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script>
+    // Nav hide-on-scroll
+    let lastY = 0;
+    const nav = document.getElementById('site-nav');
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      nav.style.transform = (y > 80 && y > lastY) ? 'translateY(-100%)' : 'translateY(0)';
+      lastY = y;
+    }, { passive: true });
+
+    // Page entrance
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    tl
+      .from(nav,               { y: -60, opacity: 0, duration: 0.55 })
+      .from('.back-link',     { x: -15, opacity: 0, duration: 0.5 }, '-=0.1')
+      .from('.section-label', { y: 20, opacity: 0, duration: 0.55 }, '-=0.3')
+      .from('.section-title', { y: 30, opacity: 0, duration: 0.65 }, '-=0.35')
+      .from('.section-desc',  { y: 20, opacity: 0, duration: 0.55 }, '-=0.4')
+      .from('.toolbar',       { y: 20, opacity: 0, duration: 0.5  }, '-=0.3')
+      .from('.bench-grid',    { y: 25, opacity: 0, duration: 0.6  }, '-=0.25');
+
+    // Animate verdict text when it appears
+    const verdictEl = document.getElementById('verdict');
+    const verdictObserver = new MutationObserver(() => {
+      if (verdictEl.textContent.trim() && verdictEl.textContent !== ' ') {
+        gsap.from(verdictEl, { scale: 0.9, opacity: 0, duration: 0.5, ease: 'back.out(1.5)' });
+        verdictObserver.disconnect();
+      }
+    });
+    verdictObserver.observe(verdictEl, { childList: true, subtree: true, characterData: true });
+  </script>
+
+  <!-- ── WASM: benchmark ───────────────────────────────────────── -->
   <script type="module">
     const status = document.getElementById('wasm-status');
+    const wasmWrap = document.getElementById('wasm-wrap');
+    const jsWrap   = document.getElementById('js-wrap');
     try {
       const { default: init, Raytracer } = await import('./demos/raytracer/raytracer.js');
       const { JsTracer } = await import('./bench-tracer.js');
       await init();
 
       const wasmRt = new Raytracer('wasm-canvas');
-      const jsRt = new JsTracer(document.getElementById('js-canvas'));
+      const jsRt   = new JsTracer(document.getElementById('js-canvas'));
       const pixels = 320 * 240;
 
       const engines = [
         { name: 'wasm', rt: wasmRt, ms: 0, statsEl: document.getElementById('wasm-stats') },
-        { name: 'js', rt: jsRt, ms: 0, statsEl: document.getElementById('js-stats') },
+        { name: 'js',   rt: jsRt,   ms: 0, statsEl: document.getElementById('js-stats') },
       ];
       const verdictEl = document.getElementById('verdict');
       let target = 50;
@@ -85,7 +169,7 @@
       const stats = (e) => {
         const n = e.rt.passes();
         if (n === 0) return;
-        const avg = e.ms / n;
+        const avg  = e.ms / n;
         const msps = (pixels / (avg / 1000)) / 1e6;
         e.statsEl.textContent =
           `${n}/${target} passes · ${avg.toFixed(1)} ms/pass · ${msps.toFixed(1)} Msamples/s`;
@@ -126,10 +210,7 @@
         const frame = () => {
           let work = false;
           for (const e of engines) {
-            if (e.rt.passes() < target) {
-              step(e);
-              work = true;
-            }
+            if (e.rt.passes() < target) { step(e); work = true; }
           }
           verdict();
           if (work) requestAnimationFrame(frame);
@@ -137,10 +218,7 @@
         };
         const restart = () => {
           target = Number(document.getElementById('target-select').value);
-          for (const e of engines) {
-            e.rt.reset?.();
-            e.ms = 0;
-          }
+          for (const e of engines) { e.rt.reset?.(); e.ms = 0; }
           // JsTracer has no reset; recreate it instead.
           engines[1].rt = new JsTracer(document.getElementById('js-canvas'));
           verdictEl.textContent = ' ';
@@ -150,11 +228,14 @@
         document.getElementById('target-select').addEventListener('change', restart);
         requestAnimationFrame(frame);
         status.textContent = 'WASM module loaded ✔ — racing';
+        wasmWrap.classList.add('active');
+        jsWrap.classList.add('active');
       }
     } catch (e) {
       status.textContent = 'WASM failed to load: ' + e;
       console.error(e);
     }
   </script>
+
 </body>
 </html>

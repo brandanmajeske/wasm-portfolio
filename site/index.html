@@ -3,62 +3,208 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Brandan — Developer Portfolio</title>
-  <meta name="description" content="Developer portfolio powered by WebAssembly demos.">
+  <title>Labs — Brandan Majeske</title>
+  <meta name="description" content="WebAssembly experiments by Brandan Majeske — interactive demos running Rust compiled to WASM in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>Brandan</h1>
-    <p class="tagline">Software developer &mdash; this site runs WebAssembly.</p>
-  </header>
+
+  <!-- ── Nav ──────────────────────────────────────────────────── -->
+  <nav class="site-nav" id="site-nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <span class="accent">BM</span><span class="sep">/</span>Labs
+      </a>
+      <ul class="nav-links">
+        <li><a href="#demos">Demos</a></li>
+        <li><a href="sand.html">Sand</a></li>
+        <li><a href="raytracer.html">Tracer</a></li>
+        <li><a href="bench.html">Benchmark</a></li>
+        <li><a href="https://brandanmajeske.com" class="nav-ext">Portfolio ↗</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <div class="hero" id="hero">
+    <div class="hero-bg" aria-hidden="true">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+    </div>
+    <div class="hero-inner">
+      <p class="hero-label">Brandan Majeske · Labs</p>
+      <h1 class="hero-title">
+        Rust&thinsp;<span class="gradient-text">&rarr;</span>&thinsp;WASM
+      </h1>
+      <p class="hero-desc">
+        Interactive demos running real Rust code compiled to WebAssembly —
+        physics simulations, path-traced rendering, and a live JS&thinsp;vs&thinsp;WASM
+        speed race, all in your browser.
+      </p>
+      <div class="hero-chips">
+        <span class="chip">Rust</span>
+        <span class="chip">wasm-bindgen</span>
+        <span class="chip">wasm-pack</span>
+        <span class="chip">web-sys</span>
+        <span class="chip">S3 + CloudFront</span>
+      </div>
+    </div>
+  </div>
 
   <main>
+
+    <!-- ── Demos ─────────────────────────────────────────────── -->
     <section id="demos">
-      <h2>Demos</h2>
-      <ul>
-        <li>
-          <a href="sand.html">Falling sand</a> &mdash; interactive particle
-          simulation (sand, water, stone) running as a Rust cellular automaton.
-        </li>
-        <li>
-          <a href="raytracer.html">Path tracer</a> &mdash; progressive
-          Monte-Carlo rendering with diffuse, metal, and glass materials,
-          refining live at one sample per pixel per frame.
-        </li>
-        <li>
-          <a href="bench.html">JS vs WASM benchmark</a> &mdash; the same path
-          tracer in JavaScript and Rust&rarr;WASM, racing side by side.
-        </li>
-      </ul>
+      <div class="container">
+        <p class="section-label">Interactive demos</p>
+        <h2 class="section-title">Three WASM experiments</h2>
+        <p class="section-desc">
+          Each demo is a separate Rust crate compiled with <code
+          style="font-family:var(--font-mono);font-size:.85em;padding:.1em .35em;border-radius:4px;background:rgba(59,130,246,.1);color:var(--color-primary)">wasm-pack</code>,
+          zero runtime dependency on JavaScript frameworks.
+        </p>
+
+        <div class="demo-grid">
+
+          <a href="sand.html" class="demo-card">
+            <span class="demo-card-icon" aria-hidden="true">⏳</span>
+            <p class="demo-card-tag">Cellular automaton</p>
+            <h3>Falling Sand</h3>
+            <p>
+              A 320&times;200 particle world — sand falls and piles, water flows
+              and settles, stone holds the walls. Draw with your mouse.
+            </p>
+            <span class="card-arrow">Open demo &rarr;</span>
+          </a>
+
+          <a href="raytracer.html" class="demo-card">
+            <span class="demo-card-icon" aria-hidden="true">🔮</span>
+            <p class="demo-card-tag">Path tracer</p>
+            <h3>Progressive Raytracer</h3>
+            <p>
+              Monte-Carlo path tracing with diffuse, metal, and glass materials.
+              The image refines live at one sample per pixel per frame.
+            </p>
+            <span class="card-arrow">Open demo &rarr;</span>
+          </a>
+
+          <a href="bench.html" class="demo-card">
+            <span class="demo-card-icon" aria-hidden="true">⚡</span>
+            <p class="demo-card-tag">Speed benchmark</p>
+            <h3>JS vs WASM Race</h3>
+            <p>
+              The same path tracer ported line-for-line to JavaScript, racing
+              the Rust&nbsp;&rarr;&nbsp;WASM build side by side.
+            </p>
+            <span class="card-arrow">Open demo &rarr;</span>
+          </a>
+
+        </div>
+      </div>
     </section>
 
-    <section id="hello-demo">
-      <h2>Walking skeleton: hello from Rust</h2>
-      <p>
-        The canvas below is rendered by a Rust module compiled to WebAssembly
-        and loaded with <code>instantiateStreaming</code>.
-      </p>
-      <canvas id="hello-canvas" width="640" height="240"
-              role="img" aria-label="Canvas rendered by a Rust WebAssembly module"></canvas>
-      <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+    <!-- ── Walking skeleton ───────────────────────────────────── -->
+    <section>
+      <div class="container">
+        <p class="section-label">Walking skeleton</p>
+        <h2 class="section-title">Hello from Rust</h2>
+        <p class="section-desc">
+          The canvas below is rendered entirely by a Rust module compiled to
+          WebAssembly and loaded with <code
+          style="font-family:var(--font-mono);font-size:.85em;padding:.1em .35em;border-radius:4px;background:rgba(59,130,246,.1);color:var(--color-primary)">instantiateStreaming</code>.
+          This was the first milestone — prove the build pipeline works before
+          building any real demo.
+        </p>
+
+        <div class="canvas-wrap" id="hello-wrap">
+          <canvas id="hello-canvas" width="640" height="240"
+                  role="img" aria-label="Canvas rendered by a Rust WebAssembly module"></canvas>
+        </div>
+        <p id="wasm-status" class="status">Loading WASM module&hellip;</p>
+      </div>
     </section>
+
   </main>
 
-  <footer>
-    <p>Built with Rust + wasm-bindgen, served from S3 + CloudFront.</p>
+  <footer class="site-footer">
+    <span>Built with Rust + wasm-bindgen &middot; Served from S3 + CloudFront</span>
+    <span>
+      <a href="https://github.com/brandanmajeske/wasm-portfolio">GitHub</a>
+      <span class="footer-dot">&middot;</span>
+      <a href="https://brandanmajeske.com">brandanmajeske.com</a>
+    </span>
   </footer>
 
+  <!-- ── GSAP ─────────────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script>
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Nav hide-on-scroll
+    let lastY = 0;
+    const nav = document.getElementById('site-nav');
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      nav.style.transform = (y > 80 && y > lastY) ? 'translateY(-100%)' : 'translateY(0)';
+      lastY = y;
+    }, { passive: true });
+
+    // Hero entrance
+    const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    heroTl
+      .from(nav,               { y: -60, opacity: 0, duration: 0.6 })
+      .from('.hero-label',     { y: 30, opacity: 0, duration: 0.7 }, '-=0.2')
+      .from('.hero-title',     { y: 40, opacity: 0, duration: 0.8 }, '-=0.45')
+      .from('.hero-desc',      { y: 25, opacity: 0, duration: 0.7 }, '-=0.5')
+      .from('.hero-chips',     { y: 20, opacity: 0, duration: 0.6 }, '-=0.45')
+      .from('.orb-1, .orb-2', { opacity: 0, duration: 1.5, ease: 'power1.out' }, 0);
+
+    // Section labels + titles — scroll-triggered
+    document.querySelectorAll('.section-label, .section-title, .section-desc').forEach(el => {
+      gsap.from(el, {
+        y: 30, opacity: 0, duration: 0.7, ease: 'power2.out',
+        scrollTrigger: { trigger: el, start: 'top 88%' }
+      });
+    });
+
+    // Demo cards — stagger
+    gsap.from('.demo-card', {
+      y: 45, opacity: 0, duration: 0.65, stagger: 0.12, ease: 'power2.out',
+      scrollTrigger: { trigger: '.demo-grid', start: 'top 85%' }
+    });
+
+    // Walking skeleton section
+    gsap.from('#hello-wrap', {
+      y: 30, opacity: 0, duration: 0.8, ease: 'power2.out',
+      scrollTrigger: { trigger: '#hello-wrap', start: 'top 88%' }
+    });
+
+    // Footer
+    gsap.from('.site-footer', {
+      opacity: 0, duration: 0.6, ease: 'power1.out',
+      scrollTrigger: { trigger: '.site-footer', start: 'top 95%' }
+    });
+  </script>
+
+  <!-- ── WASM: hello demo ───────────────────────────────────── -->
   <script type="module">
     const status = document.getElementById('wasm-status');
+    const wrap   = document.getElementById('hello-wrap');
     try {
       const init = (await import('./demos/hello/hello.js')).default;
       await init();
       status.textContent = 'WASM module loaded ✔';
+      wrap.classList.add('active');
     } catch (e) {
       status.textContent = 'WASM failed to load: ' + e;
       console.error(e);
     }
   </script>
+
 </body>
 </html>
