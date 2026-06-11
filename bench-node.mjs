@@ -1,7 +1,14 @@
 // Headless JS-vs-WASM tracer benchmark with a real clock — verification
 // harness for bench.html, run as: node bench-node.mjs [passes]
 // Stubs just enough DOM for the wasm-bindgen glue and JsTracer.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+
+// build.sh content-hashes asset filenames; resolve them by pattern.
+const find = (dir, re) => {
+  const f = readdirSync(dir).find(f => re.test(f));
+  if (!f) throw new Error(`no file matching ${re} in ${dir}`);
+  return `${dir}/${f}`;
+};
 
 const W = 320, H = 240;
 
@@ -32,9 +39,9 @@ globalThis.Window = Window;
 globalThis.window = new Window();
 globalThis.document = globalThis.window.document;
 
-const { default: init, Raytracer } = await import('./dist/demos/raytracer/raytracer.js');
-const { JsTracer } = await import('./dist/bench-tracer.js');
-await init({ module_or_path: readFileSync('./dist/demos/raytracer/raytracer_bg.wasm') });
+const { default: init, Raytracer } = await import(find('./dist/demos/raytracer', /^raytracer\.[0-9a-f]{8}\.js$/));
+const { JsTracer } = await import(find('./dist', /^bench-tracer\.[0-9a-f]{8}\.js$/));
+await init({ module_or_path: readFileSync(find('./dist/demos/raytracer', /^raytracer_bg\.[0-9a-f]{8}\.wasm$/)) });
 
 const passes = Number(process.argv[2] || 20);
 const wasmRt = new Raytracer('wasm-canvas');

@@ -56,16 +56,17 @@ jobs:
 
       - name: Sync to S3
         run: |
-          # Hashed-ish assets: long cache. WASM gets an explicit MIME type —
-          # wrong Content-Type breaks WebAssembly.instantiateStreaming().
+          # Content-hashed assets: immutable, cache for a year. WASM gets an
+          # explicit MIME type — wrong Content-Type breaks
+          # WebAssembly.instantiateStreaming().
           aws s3 sync dist/ "s3://${{ vars.S3_BUCKET }}/" \
             --delete \
             --exclude "*.html" \
-            --cache-control "public,max-age=86400"
+            --cache-control "public,max-age=31536000,immutable"
           aws s3 cp dist/ "s3://${{ vars.S3_BUCKET }}/" \
             --recursive --exclude "*" --include "*.wasm" \
             --content-type application/wasm \
-            --cache-control "public,max-age=86400" \
+            --cache-control "public,max-age=31536000,immutable" \
             --metadata-directive REPLACE
           aws s3 sync dist/ "s3://${{ vars.S3_BUCKET }}/" \
             --exclude "*" --include "*.html" \

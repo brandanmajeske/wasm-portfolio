@@ -52,6 +52,10 @@ Each demo under `demos/<name>/` is an independent Rust crate (`crate-type = ["cd
 
 HTML pages import the JS glue directly: `import('./demos/<name>/<name>.js')`. There is no bundling step.
 
+### Content hashing
+
+`build.sh` renames every CSS/JS/WASM file in `dist/` to `<stem>.<8-char-sha256>.<ext>` and rewrites the references (HTML links/imports, and the wasm filename inside each demo's JS glue). Source files in `site/` keep plain names — only `dist/` is hashed. The deploy ships hashed assets with `max-age=31536000,immutable`; HTML revalidates in 60s, so a new deploy reaches stale browsers within a minute. `bench-node.mjs` resolves the hashed filenames by pattern. `favicon.svg` is the one unhashed long-cached asset — rename it if it ever changes.
+
 ### wasm-opt flag: disabled in Cargo.toml
 
 All Cargo.toml files set `wasm-opt = false` under `[package.metadata.wasm-pack.profile.release]`. This is intentional: `build.sh` invokes `wasm-opt` manually with `--enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int`. The flags are required because recent rustc emits bulk-memory instructions that wasm-pack's built-in wasm-opt pass (an older binaryen) rejects.
