@@ -781,7 +781,7 @@ impl Siege {
                     born: self.t,
                     life: 320.0,
                     size,
-                    color: (255, 153, 0),
+                    color: (120, 210, 255),
                     kind: PKind::Flame,
                     drag: 0.9,
                 });
@@ -1683,12 +1683,41 @@ impl Siege {
 
 // ── Rendering ────────────────────────────────────────────────────────────
 
-const SHIP: [[f32; 2]; 4] = [[22.0, 0.0], [-22.0, -20.0], [-12.0, 0.0], [-22.0, 20.0]];
-const GRUNT: [[f32; 2]; 4] = [[18.0, 0.0], [-18.0, 20.0], [-6.0, 0.0], [-18.0, -20.0]];
-const DARTER: [[f32; 2]; 4] = [[18.0, 0.0], [-16.0, 10.0], [-6.0, 0.0], [-16.0, -10.0]];
-const GUNNER_BODY: [[f32; 2]; 4] =
-    [[14.0, -18.0], [14.0, 18.0], [-14.0, 18.0], [-14.0, -18.0]];
-const GUNNER_NOSE: [[f32; 2]; 3] = [[20.0, 0.0], [6.0, -18.0], [6.0, 18.0]];
+// Player — the "Wraith": a forward-swept stealth interceptor with a blacked-out
+// hull, luminous cyan leading edges, and a cockpit visor slit. Its armament
+// bolts on with the wave count (see `player_tier`): the bare frame fires from
+// the nose, then gains twin inner cannons, an outboard pair, and finally
+// missile pods + twin engines — the fully-kitted "Revenant". Purely cosmetic;
+// the collision radius never changes.
+const PLAYER_HULL: [[f32; 2]; 8] = [
+    [30.0, 0.0],
+    [3.0, -5.0],
+    [-3.0, -17.0],
+    [-15.0, -13.0],
+    [-21.0, 0.0],
+    [-15.0, 13.0],
+    [-3.0, 17.0],
+    [3.0, 5.0],
+];
+const PLAYER_KEEL: [[f32; 2]; 4] = [[24.0, 0.0], [-2.0, -3.0], [-18.0, 0.0], [-2.0, 3.0]];
+const PLAYER_VISOR: [[f32; 2]; 4] = [[16.0, -1.4], [6.0, -1.4], [6.0, 1.4], [16.0, 1.4]];
+const PLAYER_GIN_L: [[f32; 2]; 4] = [[6.0, -6.0], [27.0, -5.5], [27.0, -3.5], [6.0, -4.0]];
+const PLAYER_GIN_R: [[f32; 2]; 4] = [[6.0, 6.0], [27.0, 5.5], [27.0, 3.5], [6.0, 4.0]];
+const PLAYER_GOUT_L: [[f32; 2]; 4] = [[-2.0, -15.0], [16.0, -13.0], [16.0, -11.0], [-2.0, -13.0]];
+const PLAYER_GOUT_R: [[f32; 2]; 4] = [[-2.0, 15.0], [16.0, 13.0], [16.0, 11.0], [-2.0, 13.0]];
+const PLAYER_POD_L: [[f32; 2]; 4] = [[-13.0, -16.0], [-4.0, -16.0], [-4.0, -11.0], [-13.0, -11.0]];
+const PLAYER_POD_R: [[f32; 2]; 4] = [[-13.0, 16.0], [-4.0, 16.0], [-4.0, 11.0], [-13.0, 11.0]];
+
+// Enemy warships — an ominous red fleet, told apart by silhouette and shade.
+// Grunt: predatory chevron. Darter: razor sliver. Gunner: armored gunboat.
+const GRUNT: [[f32; 2]; 6] =
+    [[20.0, 0.0], [-6.0, -6.0], [-18.0, -15.0], [-10.0, 0.0], [-18.0, 15.0], [-6.0, 6.0]];
+const DARTER: [[f32; 2]; 4] = [[19.0, 0.0], [-15.0, 7.0], [-5.0, 0.0], [-15.0, -7.0]];
+const GUNNER_BODY: [[f32; 2]; 6] =
+    [[10.0, -17.0], [17.0, 0.0], [10.0, 17.0], [-15.0, 16.0], [-19.0, 0.0], [-15.0, -16.0]];
+const GUNNER_NOSE: [[f32; 2]; 3] = [[23.0, 0.0], [7.0, -11.0], [7.0, 11.0]];
+const GUNNER_GUN_L: [[f32; 2]; 4] = [[6.0, -13.0], [22.0, -12.0], [22.0, -9.0], [6.0, -10.0]];
+const GUNNER_GUN_R: [[f32; 2]; 4] = [[6.0, 13.0], [22.0, 12.0], [22.0, 9.0], [6.0, 10.0]];
 
 impl Siege {
     fn draw(&mut self) -> Result<(), JsValue> {
@@ -1785,11 +1814,25 @@ impl Siege {
         }
     }
 
+    /// Cosmetic armament tier, gated by wave: the hull stays the same, but
+    /// guns/pods/engines bolt on as you climb. Wave 0 (title/attract) shows the
+    /// bare frame.
+    fn player_tier(&self) -> u8 {
+        match self.wave {
+            0..=2 => 0,
+            3..=4 => 1,
+            5..=6 => 2,
+            _ => 3,
+        }
+    }
+
     fn draw_player(&mut self, ox: f32, oy: f32) {
         if !self.player_visible {
             return;
         }
         let (x, y) = (self.px + ox, self.py + oy);
+        let ang = self.pang;
+        let tier = self.player_tier();
 
         // Invincibility blink.
         let alpha = if self.t < self.invincible_until && (self.t / 80.0) as i64 % 2 == 0 {
@@ -1798,26 +1841,84 @@ impl Siege {
             1.0
         };
 
-        let (sin, cos) = self.pang.sin_cos();
+        let (sin, cos) = ang.sin_cos();
+
+        // Engines — twin cyan plumes at the top tier, a single plume below.
         if self.thrusting {
-            let flick = 10.0 + self.rf() * 8.0;
-            self.fb
-                .glow(x - cos * 26.0, y - sin * 26.0, flick, (255, 153, 0), 0.9 * alpha);
-            self.fb
-                .glow(x - cos * 30.0, y - sin * 30.0, 6.0, (255, 221, 102), 0.7 * alpha);
+            let flick = 9.0 + self.rf() * 7.0;
+            if tier >= 3 {
+                for e in place(&[[-19.0, -5.0], [-19.0, 5.0]], ang, x, y).iter() {
+                    self.fb
+                        .glow(e[0] - cos * 8.0, e[1] - sin * 8.0, flick * 0.8, (120, 230, 255), 0.8 * alpha);
+                }
+                self.fb
+                    .glow(x - cos * 30.0, y - sin * 30.0, 6.0, (210, 250, 255), 0.6 * alpha);
+            } else {
+                self.fb
+                    .glow(x - cos * 26.0, y - sin * 26.0, flick, (120, 230, 255), 0.85 * alpha);
+                self.fb
+                    .glow(x - cos * 32.0, y - sin * 32.0, 6.0, (210, 250, 255), 0.6 * alpha);
+            }
         }
         if self.reversing {
             let flick = 5.0 + self.rf() * 6.0;
             let (nx, ny) = (x + cos * 22.0, y + sin * 22.0);
-            self.fb.glow(nx, ny, 7.0, (34, 102, 255), 0.9 * alpha);
+            self.fb.glow(nx, ny, 7.0, (68, 221, 255), 0.85 * alpha);
             self.fb
-                .glow(nx + cos * flick, ny + sin * flick, 4.0, (170, 221, 255), 0.6 * alpha);
+                .glow(nx + cos * flick, ny + sin * flick, 4.0, (170, 238, 255), 0.6 * alpha);
         }
 
-        let pts = place(&SHIP, self.pang, x, y);
-        self.fb.fill_poly(&pts, (184, 196, 204), alpha);
+        // Armament bolts on with the tier, drawn under the hull.
+        if tier >= 3 {
+            self.fb.fill_poly(&place(&PLAYER_POD_L, ang, x, y), (40, 48, 64), alpha);
+            self.fb.fill_poly(&place(&PLAYER_POD_R, ang, x, y), (40, 48, 64), alpha);
+        }
+        if tier >= 2 {
+            self.fb.fill_poly(&place(&PLAYER_GOUT_L, ang, x, y), (50, 60, 78), alpha);
+            self.fb.fill_poly(&place(&PLAYER_GOUT_R, ang, x, y), (50, 60, 78), alpha);
+        }
+        if tier >= 1 {
+            self.fb.fill_poly(&place(&PLAYER_GIN_L, ang, x, y), (50, 60, 78), alpha);
+            self.fb.fill_poly(&place(&PLAYER_GIN_R, ang, x, y), (50, 60, 78), alpha);
+        }
+
+        // Stealth hull with luminous cyan leading edges + a dark keel.
+        let hull = place(&PLAYER_HULL, ang, x, y);
+        self.fb.fill_poly(&hull, (34, 42, 58), alpha);
+        self.fb.stroke_poly(&hull, 1.6, (68, 221, 255), 0.9 * alpha);
+        self.fb.fill_poly(&place(&PLAYER_KEEL, ang, x, y), (20, 26, 38), alpha);
+
+        // Cockpit visor slit + glow.
+        self.fb.fill_poly(&place(&PLAYER_VISOR, ang, x, y), (150, 240, 255), alpha);
         self.fb
-            .fill_circle(x + cos * 2.0, y + sin * 2.0, 5.0, (228, 234, 238), 0.9 * alpha);
+            .glow(x + cos * 11.0, y + sin * 11.0, 6.0, (68, 221, 255), 0.55 * alpha);
+
+        // Live muzzles: nose always, inner @t1, outboard @t2.
+        let mut muz: Vec<[f32; 2]> = vec![[30.0, 0.0]];
+        if tier >= 1 {
+            muz.push([27.0, -4.5]);
+            muz.push([27.0, 4.5]);
+        }
+        if tier >= 2 {
+            muz.push([16.0, -12.0]);
+            muz.push([16.0, 12.0]);
+        }
+        for m in place(&muz, ang, x, y).iter() {
+            self.fb.glow(m[0], m[1], 4.0, (120, 230, 255), 0.75 * alpha);
+            self.fb.fill_circle(m[0], m[1], 1.5, (210, 250, 255), 0.95 * alpha);
+        }
+        // Missile warheads glow at the top tier.
+        if tier >= 3 {
+            for m in place(&[[-4.0, -13.5], [-4.0, 13.5]], ang, x, y).iter() {
+                self.fb.fill_circle(m[0], m[1], 1.8, (255, 120, 90), 0.95 * alpha);
+            }
+        }
+
+        // Wingtip running lights.
+        for m in place(&[[-3.0, -17.0], [-3.0, 17.0]], ang, x, y).iter() {
+            self.fb.fill_circle(m[0], m[1], 1.6, (150, 240, 255), 0.9 * alpha);
+            self.fb.glow(m[0], m[1], 3.5, (68, 221, 255), 0.45 * alpha);
+        }
 
         if self.shield {
             self.fb.stroke_circle(x, y, 30.0, 2.0, (68, 255, 136), 0.7);
@@ -1831,31 +1932,41 @@ impl Siege {
             let (x, y) = (e.x + ox, e.y + oy);
             let flash = self.t < e.flash_until;
 
+            let (sin, cos) = e.ang.sin_cos();
             match e.kind {
                 EKind::Grunt => {
-                    let body = if flash { (255, 255, 255) } else { (204, 34, 0) };
-                    let pts = place(&GRUNT, e.ang, x, y);
-                    self.fb.fill_poly(&pts, body, 1.0);
-                    let (sin, cos) = e.ang.sin_cos();
-                    self.fb
-                        .fill_circle(x + cos * 4.0, y + sin * 4.0, 5.0, (255, 102, 68), 0.85);
+                    let body = if flash { (255, 255, 255) } else { (176, 26, 22) };
+                    self.fb.fill_poly(&place(&GRUNT, e.ang, x, y), body, 1.0);
+                    // A single glowing eye in the prow — predatory, aimed at you.
+                    let (ex, ey) = (x + cos * 6.0, y + sin * 6.0);
+                    self.fb.glow(ex, ey, 7.0, (255, 60, 40), 0.55);
+                    self.fb.fill_circle(ex, ey, 3.0, (255, 120, 90), 0.9);
                 }
                 EKind::Darter => {
-                    let body = if flash { (255, 255, 255) } else { (255, 204, 34) };
-                    let pts = place(&DARTER, e.ang, x, y);
-                    self.fb.fill_poly(&pts, body, 1.0);
-                    self.fb.fill_circle(x, y, 3.0, (255, 240, 153), 0.9);
+                    let body = if flash { (255, 255, 255) } else { (232, 64, 24) };
+                    self.fb.fill_poly(&place(&DARTER, e.ang, x, y), body, 1.0);
+                    let (ex, ey) = (x + cos * 2.0, y + sin * 2.0);
+                    self.fb.glow(ex, ey, 5.0, (255, 110, 40), 0.5);
+                    self.fb.fill_circle(ex, ey, 2.2, (255, 200, 120), 0.9);
                 }
                 EKind::Gunner => {
-                    let body = if flash { (255, 255, 255) } else { (153, 68, 204) };
-                    let nose = if flash { (255, 255, 255) } else { (187, 119, 221) };
+                    let body = if flash { (255, 255, 255) } else { (132, 18, 18) };
+                    let nose = if flash { (255, 255, 255) } else { (176, 36, 30) };
+                    // Twin barrels jut from an armored hull behind a ram prow.
+                    self.fb.fill_poly(&place(&GUNNER_GUN_L, e.ang, x, y), (60, 14, 14), 1.0);
+                    self.fb.fill_poly(&place(&GUNNER_GUN_R, e.ang, x, y), (60, 14, 14), 1.0);
                     self.fb.fill_poly(&place(&GUNNER_BODY, e.ang, x, y), body, 1.0);
                     self.fb.fill_poly(&place(&GUNNER_NOSE, e.ang, x, y), nose, 1.0);
-                    self.fb.fill_circle(x, y, 6.0, (255, 102, 255), 0.85);
+                    self.fb.glow(x, y, 10.0, (255, 50, 40), 0.5);
+                    self.fb.fill_circle(x, y, 5.0, (255, 90, 70), 0.9);
+                    for m in place(&[[22.0, -11.0], [22.0, 11.0]], e.ang, x, y).iter() {
+                        self.fb.glow(m[0], m[1], 3.5, (255, 120, 40), 0.6);
+                    }
                 }
                 EKind::Boss => {
-                    let body = if flash { (255, 255, 255) } else { (85, 34, 102) };
-                    let plate = if flash { (255, 255, 255) } else { (119, 51, 170) };
+                    // The Dreadnought — blackened iron, lit by a red reactor core.
+                    let body = if flash { (255, 255, 255) } else { (96, 18, 22) };
+                    let plate = if flash { (255, 255, 255) } else { (156, 30, 34) };
                     let hex: Vec<[f32; 2]> = (0..6)
                         .map(|k| {
                             let a = k as f32 / 6.0 * std::f32::consts::TAU;
@@ -1867,15 +1978,15 @@ impl Siege {
                         hex.iter().map(|p| [p[0] * 0.62, p[1] * 0.62]).collect();
                     self.fb.fill_poly(&place(&inner, -e.ang * 1.4, x, y), plate, 1.0);
                     let pulse = 0.55 + 0.45 * ((self.t / 260.0).sin() as f32).abs();
-                    self.fb.glow(x, y, 18.0, (255, 102, 255), pulse);
-                    self.fb.fill_circle(x, y, 8.0, (255, 102, 255), 0.9);
+                    self.fb.glow(x, y, 18.0, (255, 60, 50), pulse);
+                    self.fb.fill_circle(x, y, 8.0, (255, 80, 64), 0.9);
                     for k in 0..3 {
                         let a = e.ang * 2.0 + k as f32 / 3.0 * std::f32::consts::TAU;
                         self.fb.fill_circle(
                             x + a.cos() * 28.0,
                             y + a.sin() * 24.0,
                             4.0,
-                            (255, 80, 120),
+                            (255, 70, 60),
                             0.9,
                         );
                     }

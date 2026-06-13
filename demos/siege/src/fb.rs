@@ -137,6 +137,47 @@ impl Fb {
         }
     }
 
+    /// Anti-aliased thick line segment — distance-to-segment with a 1px edge.
+    pub fn line(&mut self, x0: f32, y0: f32, x1: f32, y1: f32, thick: f32, c: Color, a: f32) {
+        let hw = thick * 0.5;
+        let minx = (x0.min(x1) - hw - 1.0).floor().max(0.0) as i32;
+        let maxx = (x0.max(x1) + hw + 1.0).ceil().min(self.w as f32 - 1.0) as i32;
+        let miny = (y0.min(y1) - hw - 1.0).floor().max(0.0) as i32;
+        let maxy = (y0.max(y1) + hw + 1.0).ceil().min(self.h as f32 - 1.0) as i32;
+        let dx = x1 - x0;
+        let dy = y1 - y0;
+        let len2 = dx * dx + dy * dy;
+        for y in miny..=maxy {
+            for x in minx..=maxx {
+                let px = x as f32 + 0.5;
+                let py = y as f32 + 0.5;
+                let t = if len2 > 0.0 {
+                    (((px - x0) * dx + (py - y0) * dy) / len2).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let d = ((px - (x0 + t * dx)).powi(2) + (py - (y0 + t * dy)).powi(2)).sqrt();
+                let edge = (hw - d + 0.5).clamp(0.0, 1.0);
+                if edge > 0.0 {
+                    self.blend(x, y, c, a * edge);
+                }
+            }
+        }
+    }
+
+    /// Stroke a closed polygon outline — the luminous edges on the hero hull.
+    pub fn stroke_poly(&mut self, pts: &[[f32; 2]], thick: f32, c: Color, a: f32) {
+        let n = pts.len();
+        if n < 2 {
+            return;
+        }
+        for i in 0..n {
+            let p = pts[i];
+            let q = pts[(i + 1) % n];
+            self.line(p[0], p[1], q[0], q[1], thick, c, a);
+        }
+    }
+
     /// Even-odd scanline fill — handles every ship/asteroid silhouette here.
     pub fn fill_poly(&mut self, pts: &[[f32; 2]], c: Color, a: f32) {
         let n = pts.len();
