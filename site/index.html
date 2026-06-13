@@ -184,10 +184,13 @@
       });
     });
 
-    // Demo cards — stagger
+    // Demo cards — stagger. clearProps + once so a completed reveal never
+    // leaves a lingering transform; refresh() below keeps the trigger's start
+    // position honest after web fonts shift the layout.
     gsap.from('.demo-card', {
       y: 45, opacity: 0, duration: 0.65, stagger: 0.12, ease: 'power2.out',
-      scrollTrigger: { trigger: '.demo-grid', start: 'top 85%' }
+      clearProps: 'transform,opacity',
+      scrollTrigger: { trigger: '.demo-grid', start: 'top 90%', once: true }
     });
 
     // Walking skeleton section
@@ -201,6 +204,13 @@
       opacity: 0, duration: 0.6, ease: 'power1.out',
       scrollTrigger: { trigger: '.site-footer', start: 'top 95%' }
     });
+
+    // Trigger start positions are measured at script time — before web fonts
+    // and the WASM canvas settle. Recompute once those land so no reveal stays
+    // stuck at its start state (the cards were freezing at translateY(45px)).
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener('load', refresh);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(refresh);
   </script>
 
   <!-- ── WASM: hello demo ───────────────────────────────────── -->
