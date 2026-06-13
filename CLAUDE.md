@@ -27,6 +27,7 @@ node bench-node.mjs [passes]   # JS-vs-WASM tracer benchmark with real clock
 
 Each demo page also accepts query params for synchronous headless testing:
 - `sand.html?ticks=N` — runs N simulation ticks then renders once
+- `siege.html?ticks=N` — boots the AI attract demo, steps N ticks, renders once (`&enhanced=1` for asteroid/boss mode)
 - `bench.html?passes=N` — runs both tracers for N passes then shows results
 
 ## Architecture
@@ -38,6 +39,7 @@ site/            Static shell (HTML, CSS, bench-tracer.js)
 demos/           One Rust crate per WASM demo
   hello/         Canvas "hello" — walking skeleton
   sand/          Falling-sand cellular automaton
+  siege/         Solar Siege — arcade shooter (software-rendered)
   raytracer/     Monte Carlo path tracer
 dist/            Build output (generated, not committed)
 infra/           AWS resource reference (manual setup notes)
@@ -68,6 +70,7 @@ Each demo exposes one `#[wasm_bindgen]` struct with methods:
 |---|---|---|
 | hello | (bare `#[wasm_bindgen]` fns) | draws once on load |
 | sand | `Sand` | `new(canvas_id)`, `paint(x,y,material,radius)`, `tick()`, `render()`, `clear()` |
+| siege | `Siege` | `new(canvas_id)`, `frame(now)`, `key(key,down)`, `set_enhanced(bool)`; headless: `boot_demo()`, `step_ms(dt)`, `render_once()`, `current_score()` |
 | raytracer | `Raytracer` | `new(canvas_id)`, `pass()`, `passes()`, `present()`, `reset()` |
 
 All demos receive a canvas ID string and grab the `CanvasRenderingContext2d` inside Rust via `web-sys`. Rendering is done by blitting an `ImageData` buffer.
